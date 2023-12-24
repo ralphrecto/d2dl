@@ -17,7 +17,6 @@ class ModelingDataset:
             DataLoader(self.val, batch_size=batch_size, shuffle=True)
         )
 
-@dataclass
 class Hyperparameters:
     loss: Dict[str, Any] = field(default_factory=dict)
     opt: Dict[str, Any] = field(default_factory=dict)
