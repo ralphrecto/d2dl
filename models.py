@@ -20,8 +20,10 @@ class LinearRegression(nn.Module):
 class SoftmaxRegression(nn.Sequential):
     def __init__(self, input_d: int, output_d: int):
         super().__init__(
-            nn.Linear(input_d, output_d, bias=True)
+            nn.Linear(input_d, output_d)
             # nn.CrossEntropyLoss takes as input unnormalized logits
         )
 
-        self.apply(init_weights)
+        # Note: initializing with gaussian weights kills performance for 
+        # fashionMNIST (?!)
+        # self.apply(init_weights)
