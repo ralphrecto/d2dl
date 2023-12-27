@@ -20,8 +20,8 @@ class LinearRegression(nn.Module):
 class SoftmaxRegression(nn.Sequential):
     def __init__(self, input_d: int, output_d: int):
         super().__init__(
-            nn.Linear(input_d, output_d, bias=True),
-            nn.Softmax()
+            nn.Linear(input_d, output_d, bias=True)
+            # nn.CrossEntropyLoss takes as input unnormalized logits
         )
 
         self.apply(init_weights)

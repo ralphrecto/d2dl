@@ -41,9 +41,9 @@ class Trainer:
                 pred_y = self.model(train_X)
                 loss = self.loss_fn(pred_y, train_y)
 
-                self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
+                self.opt.zero_grad()
 
                 val_pred_y = self.model(val_X)
                 val_loss = self.loss_fn(val_pred_y, val_y)
