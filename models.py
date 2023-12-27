@@ -2,8 +2,8 @@ import torch.nn as nn
 
 def init_weights(m: nn.Module):
     if type(m) == nn.Linear:
-        nn.init.normal_(m.weight)
-        nn.init.normal_(m.bias)
+        nn.init.normal_(m.weight, std=0.1)
+        nn.init.normal_(m.bias, std=0.1)
 
 class LinearRegression(nn.Module):
     def __init__(self, num_inputs: int = 1):
@@ -24,6 +24,6 @@ class SoftmaxRegression(nn.Sequential):
             # nn.CrossEntropyLoss takes as input unnormalized logits
         )
 
-        # Note: initializing with gaussian weights kills performance for 
+        # Note: initializing with *standard* gaussian weights kills performance for 
         # fashionMNIST (?!)
-        # self.apply(init_weights)
+        self.apply(init_weights)
