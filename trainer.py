@@ -1,22 +1,13 @@
 import pandas as pd
 from dataclasses import dataclass, field
-from typing import Dict, Any, Callable, Union
-from torch.utils.data import DataLoader, Dataset
+from typing import Dict, Any, Callable 
+from itertools import product 
 from torch.optim import Optimizer
 import torch.nn as nn
 
-class ModelingDataset:
+from data import ModelingDataset
 
-    def __init__(self, train: Dataset, val: Dataset):
-        self.train = train
-        self.val = val
-
-    def get_dataloaders(self, batch_size):
-        return (
-            DataLoader(self.train, batch_size=batch_size, shuffle=True),
-            DataLoader(self.val, batch_size=batch_size, shuffle=True)
-        )
-
+@dataclass
 class Hyperparameters:
     loss: Dict[str, Any] = field(default_factory=dict)
     opt: Dict[str, Any] = field(default_factory=dict)
@@ -62,3 +53,39 @@ class Trainer:
                     val_loss_hist.append(val_loss.item())
 
         return pd.DataFrame(dict(train=train_loss_hist, val=val_loss_hist))
+
+def grid_search(hyperparam_grid, trainer_provider):
+    results = []
+    for i, hyperparams in enumerate(hyperparam_grid):
+        print(f"Progress: {i}/{len(hyperparam_grid)}")
+        trainer = trainer_provider(hyperparams)
+
+        train_res = trainer.train(10)
+        results.append(train_res)
+
+    hyperparam_i, min_val_idx, min_val_loss = min((
+        (i, result["val"].idxmin(), result["val"].min())
+        for i, result in enumerate(results)
+    ), key=lambda t: t[2])
+
+    return hyperparam_i, min_val_loss
+
+def grid_search_params(hyperparam_grids: Hyperparameters): 
+    keys = []
+    grid_vals = []
+    for namespace, hyperparams in hyperparam_grids.__dict__.items():
+        for k, k_grid_vals in hyperparams.items():
+            keys.append((namespace, k))
+            grid_vals.append(k_grid_vals)
+
+    all_val_combos = product(*grid_vals)
+
+    all_hyperparams = []
+    for all_val_combo in all_val_combos:
+        hyperparams = Hyperparameters()
+        for ((namespace, k), val) in zip(keys, all_val_combo):
+            getattr(hyperparams, namespace)[k] = val
+
+        all_hyperparams.append(hyperparams)
+
+    return all_hyperparams
