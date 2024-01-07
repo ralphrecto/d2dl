@@ -82,9 +82,6 @@ def kaggle_house_preprocessing(df, target_col: str):
     imputer = SimpleImputer(strategy='mean')
     df[df.select_dtypes(include=['float64', 'int64']).columns] = imputer.fit_transform(df.select_dtypes(include=['float64', 'int64']))
 
-    # One-hot encode categorical variables
-    df = pd.get_dummies(df, drop_first=True, dtype=float)
-
     # Standardize numerical features
     scaler = StandardScaler()
     numerical_cols = [
@@ -93,6 +90,9 @@ def kaggle_house_preprocessing(df, target_col: str):
         if c != target_col
     ]
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+
+    # One-hot encode categorical variables
+    df = pd.get_dummies(df, drop_first=True, dtype=float)
 
     return df
 
