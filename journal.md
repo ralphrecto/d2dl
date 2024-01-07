@@ -1,5 +1,16 @@
 # Journal
 
+## 2024/01/07
+Working on the Kaggle housing dataset.
+
+Using a MLP with 1 hidden layer and a ReLU activation. The model's outputs are improving (w.r.t. the loss), but it seems entirely at the wrong scale. It's outputting values in the scale of 1e1 when obviously housing prices are in the scale of 1e5 to 1e6. Going to try setting the bias of the output layer to the mean of the sale price of the dataset.
+
+> init well. Initialize the final layer weights correctly. E.g. if you are regressing some values that have a mean of 50 then initialize the final bias to 50. If you have an imbalanced dataset of a ratio 1:10 of positives:negatives, set the bias on your logits such that your network predicts probability of 0.1 at initialization. Setting these correctly will speed up convergence and eliminate “hockey stick” loss curves where in the first few iteration your network is basically just learning the bias.
+from: https://karpathy.github.io/2019/04/25/recipe/
+
+- Going to also try scaling the target during pre-processing and after inference
+- Convergence speed is also heavily affected by the learning rate...was using 1e-3 before, 1e-2 helped speed it up a lot (duh)
+
 ## 2023/12/26
 
 Training a standard softmax regression on FashionMNIST.

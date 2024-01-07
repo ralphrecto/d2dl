@@ -41,6 +41,7 @@ class Trainer:
 
                 pred_y = self.model(train_X)
                 loss = self.loss_fn(pred_y, train_y)
+                print("loss", pred_y.mean(), train_y.mean(), loss)
 
                 loss.backward()
                 self.opt.step()

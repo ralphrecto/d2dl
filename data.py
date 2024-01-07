@@ -1,20 +1,23 @@
-from typing import Tuple
+from typing import Tuple, List
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 import torchvision
 import torch
 import pandas as pd
+import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from pathlib import Path
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 
 class ModelingDataset:
 
-    def __init__(self, train: Dataset, val: Dataset):
+    def __init__(self, train: Dataset, val: Dataset, test = None):
         self.train = train
         self.val = val
+        self.test = test
 
     def get_dataloaders(self, batch_size):
         return (
@@ -51,14 +54,11 @@ class DataFrameDataset(Dataset):
             self,
             dataframe: pd.DataFrame,
             target_col: str,
+            feature_cols: str
         ):
         self.dataframe = dataframe
         self.target_col = target_col
-        self.feature_cols = [
-            c
-            for c in self.dataframe.columns
-            if c != target_col
-        ]
+        self.feature_cols = feature_cols
 
     def __len__(self):
         return len(self.dataframe)
@@ -70,41 +70,149 @@ class DataFrameDataset(Dataset):
             sample.loc[self.feature_cols].values,
             dtype=torch.float32
         )
-        target = torch.tensor(
-            sample.loc[[self.target_col]].values,
-            dtype=torch.float32
-        )
+
+        if self.target_col in self.dataframe:
+            target = torch.tensor(
+                sample.loc[[self.target_col]].values,
+                dtype=torch.float32
+            )
+        else:
+            target = None
 
         return features, target
 
-def kaggle_house_preprocessing(df, target_col: str):
-    # Impute missing values with mean
-    imputer = SimpleImputer(strategy='mean')
-    df[df.select_dtypes(include=['float64', 'int64']).columns] = imputer.fit_transform(df.select_dtypes(include=['float64', 'int64']))
+KAGGLE_HOUSING_CATEGORICAL_VARS = [
+    "MSSubClass",
+    "MSZoning",
+    "Street",
+    "Alley",
+    "LotShape",
+    "LandContour",
+    "Utilities",
+    "LotConfig",
+    "LandSlope",
+    "Neighborhood",
+    "Condition1",
+    "Condition2",
+    "BldgType",
+    "HouseStyle",
+    "RoofStyle",
+    "RoofMatl",
+    "Exterior1st",
+    "Exterior2nd",
+    "MasVnrType",
+    "ExterQual",
+    "ExterCond",
+    "Foundation",
+    "BsmtQual",
+    "BsmtCond",
+    "BsmtExposure",
+    "BsmtFinType1",
+    "BsmtFinType2",
+    "Heating",
+    "HeatingQC",
+    "CentralAir",
+    "Electrical",
+    "KitchenQual",
+    "Functional",
+    "FireplaceQu",
+    "GarageType",
+    "GarageFinish",
+    "GarageQual",
+    "GarageCond",
+    "PavedDrive",
+    "PoolQC",
+    "Fence",
+    "MiscFeature",
+    "SaleType",
+    "SaleCondition"
+]
 
-    # Standardize numerical features
-    scaler = StandardScaler()
+def kaggle_house_preprocessing(
+        raw_df: pd.DataFrame,
+        target_col: str,
+        non_features: List[str],
+        # one_hot_encoder 
+    ):
+    df = raw_df.drop(columns=non_features)
+
     numerical_cols = [
         c
         for c in df.select_dtypes(include=['float64', 'int64']).columns
-        if c != target_col
+        if c != target_col and c not in KAGGLE_HOUSING_CATEGORICAL_VARS
     ]
+
+    # Impute missing values with mean
+    imputer = SimpleImputer(strategy='mean')
+    df[numerical_cols] = imputer.fit_transform(df[numerical_cols])
+
+    # Standardize numerical features
+    scaler = StandardScaler()
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
 
     # One-hot encode categorical variables
-    df = pd.get_dummies(df, drop_first=True, dtype=float)
+    # encoded_data = one_hot_encoder.transform(df[KAGGLE_HOUSING_CATEGORICAL_VARS])
+    # new_columns = one_hot_encoder.get_feature_names_out(KAGGLE_HOUSING_CATEGORICAL_VARS)
+    # encoded_df = pd.DataFrame(encoded_data, columns=new_columns)
+    # df = df.drop(KAGGLE_HOUSING_CATEGORICAL_VARS, axis=1).join(encoded_df)
+    df = pd.get_dummies(df, columns=KAGGLE_HOUSING_CATEGORICAL_VARS, dummy_na=True, dtype=float)
 
-    return df
+    # Scale the output column down using log
+    # if target_col in df.columns:
+    #     df[target_col] = np.log(df[target_col])
+
+    df[non_features] = raw_df[non_features]
+
+    feature_cols = [
+        c
+        for c in df.columns
+        if (c != target_col) and (c not in non_features)
+    ]
+
+    return df, feature_cols
 
 def kaggle_housing(root = "datasets/kaggle_housing", val_pct = 0.2):
     with open(Path(root) / "train.csv") as f:
-        df = pd.read_csv(f)
+        train_df = pd.read_csv(f)
 
-    postprocessed_df = kaggle_house_preprocessing(df, "SalePrice")
+    with open(Path(root) / "test.csv") as f:
+        test_df = pd.read_csv(f)
 
-    train_df, val_df = train_test_split(postprocessed_df, test_size=val_pct)
+    all_df = pd.concat([
+        train_df.assign(split="train"),
+        test_df.assign(split="test", SalePrice=np.nan),
+    ])
 
-    train = DataFrameDataset(train_df, "SalePrice")
-    val = DataFrameDataset(val_df, "SalePrice")
+    # encoder = OneHotEncoder(sparse=False, drop='first')
+    # all_categorical_df = pd.concat([
+    #     train_df[KAGGLE_HOUSING_CATEGORICAL_VARS],
+    #     test_df[KAGGLE_HOUSING_CATEGORICAL_VARS]
+    # ])
+    # encoder.fit(all_categorical_df)
 
-    return ModelingDataset(train, val)
+    preprocessed_df, feature_cols = kaggle_house_preprocessing(all_df, target_col="SalePrice", non_features=["Id", "split"])
+
+    preprocessed_train_df = preprocessed_df.query("split == 'train'").drop(columns=["split"])
+    preprocessed_train_df["SalePrice"] = np.log(preprocessed_train_df["SalePrice"])
+
+    preprocessed_test_df = preprocessed_df.query("split == 'test'").drop(columns=["split", "SalePrice"])
+
+    train_df, val_df = train_test_split(preprocessed_train_df, test_size=val_pct)
+
+    train = DataFrameDataset(train_df, "SalePrice", feature_cols)
+    val = DataFrameDataset(val_df, "SalePrice", feature_cols)
+    test = DataFrameDataset(preprocessed_test_df, "SalePrice", feature_cols)
+
+    return ModelingDataset(train, val, test)
+
+    # postprocessed_train_df, feature_cols = kaggle_house_preprocessing(train_df, "SalePrice", ["Id"], encoder)
+
+    # train_df, val_df = train_test_split(postprocessed_train_df, test_size=val_pct)
+
+    # train = DataFrameDataset(train_df, "SalePrice", feature_cols)
+    # val = DataFrameDataset(val_df, "SalePrice", feature_cols)
+
+    # postprocessed_test_df, _ = kaggle_house_preprocessing(test_df, "SalePrice", ["Id"], encoder)
+    # test = DataFrameDataset(postprocessed_test_df, "SalePrice", feature_cols)
+
+    # return ModelingDataset(train, val, test)
