@@ -71,13 +71,13 @@ class DataFrameDataset(Dataset):
             dtype=torch.float32
         )
         target = torch.tensor(
-            sample.loc[self.target_col],
+            sample.loc[[self.target_col]].values,
             dtype=torch.float32
         )
 
         return features, target
 
-def kaggle_house_preprocessing(df):
+def kaggle_house_preprocessing(df, target_col: str):
     # Impute missing values with mean
     imputer = SimpleImputer(strategy='mean')
     df[df.select_dtypes(include=['float64', 'int64']).columns] = imputer.fit_transform(df.select_dtypes(include=['float64', 'int64']))
@@ -87,7 +87,11 @@ def kaggle_house_preprocessing(df):
 
     # Standardize numerical features
     scaler = StandardScaler()
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
+    numerical_cols = [
+        c
+        for c in df.select_dtypes(include=['float64', 'int64']).columns
+        if c != target_col
+    ]
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
 
     return df
@@ -96,7 +100,7 @@ def kaggle_housing(root = "datasets/kaggle_housing", val_pct = 0.2):
     with open(Path(root) / "train.csv") as f:
         df = pd.read_csv(f)
 
-    postprocessed_df = kaggle_house_preprocessing(df)
+    postprocessed_df = kaggle_house_preprocessing(df, "SalePrice")
 
     train_df, val_df = train_test_split(postprocessed_df, test_size=val_pct)
 

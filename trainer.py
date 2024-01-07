@@ -11,6 +11,7 @@ from data import ModelingDataset
 class Hyperparameters:
     loss: Dict[str, Any] = field(default_factory=dict)
     opt: Dict[str, Any] = field(default_factory=dict)
+    model: Dict[str, Any] = field(default_factory=dict)
     general: Dict[str, Any] = field(default_factory=dict)
 
 class Trainer:

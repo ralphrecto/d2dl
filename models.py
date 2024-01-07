@@ -8,7 +8,8 @@ def init_weights(m: nn.Module):
 class LinearRegression(nn.Sequential):
     def __init__(self, num_outputs: int = 1):
         super().__init__(
-            nn.LazyLinear(num_outputs)
+            nn.LazyLinear(num_outputs),
+            nn.ReLU()
         )
 
 class SoftmaxRegression(nn.Sequential):
