@@ -151,15 +151,7 @@ def kaggle_house_preprocessing(
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
 
     # One-hot encode categorical variables
-    # encoded_data = one_hot_encoder.transform(df[KAGGLE_HOUSING_CATEGORICAL_VARS])
-    # new_columns = one_hot_encoder.get_feature_names_out(KAGGLE_HOUSING_CATEGORICAL_VARS)
-    # encoded_df = pd.DataFrame(encoded_data, columns=new_columns)
-    # df = df.drop(KAGGLE_HOUSING_CATEGORICAL_VARS, axis=1).join(encoded_df)
     df = pd.get_dummies(df, columns=KAGGLE_HOUSING_CATEGORICAL_VARS, dummy_na=True, dtype=float)
-
-    # Scale the output column down using log
-    # if target_col in df.columns:
-    #     df[target_col] = np.log(df[target_col])
 
     df[non_features] = raw_df[non_features]
 
@@ -183,13 +175,6 @@ def kaggle_housing(root = "datasets/kaggle_housing", val_pct = 0.2):
         test_df.assign(split="test", SalePrice=np.nan),
     ])
 
-    # encoder = OneHotEncoder(sparse=False, drop='first')
-    # all_categorical_df = pd.concat([
-    #     train_df[KAGGLE_HOUSING_CATEGORICAL_VARS],
-    #     test_df[KAGGLE_HOUSING_CATEGORICAL_VARS]
-    # ])
-    # encoder.fit(all_categorical_df)
-
     preprocessed_df, feature_cols = kaggle_house_preprocessing(all_df, target_col="SalePrice", non_features=["Id", "split"])
 
     preprocessed_train_df = preprocessed_df.query("split == 'train'").drop(columns=["split"])
@@ -204,15 +189,3 @@ def kaggle_housing(root = "datasets/kaggle_housing", val_pct = 0.2):
     test = DataFrameDataset(preprocessed_test_df, "SalePrice", feature_cols)
 
     return ModelingDataset(train, val, test)
-
-    # postprocessed_train_df, feature_cols = kaggle_house_preprocessing(train_df, "SalePrice", ["Id"], encoder)
-
-    # train_df, val_df = train_test_split(postprocessed_train_df, test_size=val_pct)
-
-    # train = DataFrameDataset(train_df, "SalePrice", feature_cols)
-    # val = DataFrameDataset(val_df, "SalePrice", feature_cols)
-
-    # postprocessed_test_df, _ = kaggle_house_preprocessing(test_df, "SalePrice", ["Id"], encoder)
-    # test = DataFrameDataset(postprocessed_test_df, "SalePrice", feature_cols)
-
-    # return ModelingDataset(train, val, test)
