@@ -37,7 +37,6 @@ def fashion_mnist(root = "datasets/fashion_mnist", resize=(28, 28)) -> ModelingD
     trans = transforms.Compose([
         transforms.Resize(resize),
         transforms.ToTensor(),
-        transforms.Lambda(torch.flatten)
     ])
 
     train = torchvision.datasets.FashionMNIST(

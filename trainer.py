@@ -32,6 +32,7 @@ class Trainer:
     def train(self, plot_cadence):
         train_dataloader, val_dataloader = self.dataset.get_dataloaders(self.hyperparams.general["batch_size"])
 
+        print(train_dataloader)
         train_loss_hist = []
         val_loss_hist = []
         for epoch_num in range(self.hyperparams.general["num_epochs"]):
@@ -41,7 +42,7 @@ class Trainer:
 
                 pred_y = self.model(train_X)
                 loss = self.loss_fn(pred_y, train_y)
-                print("loss", pred_y.mean(), train_y.mean(), loss)
+                print("loss", pred_y.float().mean(), train_y.float().mean(), loss)
 
                 loss.backward()
                 self.opt.step()
